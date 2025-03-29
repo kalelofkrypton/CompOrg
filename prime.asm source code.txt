@@ -1,0 +1,131 @@
+section .bss
+    num_input resb 10 
+
+section .data
+    prompt db "Enter a number: ", 0
+    message_prime db "Result is prime", 0xA, 0
+    message_composite db "Result is composite", 0xA, 0
+    exit_msg db "Exiting program...", 0xA, 0
+    error_msg db "Invalid input. ", 0xA, 0
+    exit_str db "exit", 0
+
+section .text
+    global _start
+
+_start:
+main_loop:
+    ; Display prompt
+    mov rax, 4                 
+    mov rdi, 1                 
+    lea rsi, [prompt]          
+    mov rdx, 16                
+    syscall
+
+    ; Read user input
+    mov rax, 3                 
+    mov rdi, 0                 
+    lea rsi, [num_input]       
+    mov rdx, 10                
+    syscall
+
+    ; Check if input is 'exit'
+    lea rdi, [num_input]       
+    lea rsi, [exit_str]        
+    call strcmp            
+    test rax, rax           
+    jz exit_program            
+
+    ; Convert string to integer
+    mov rsi, num_input     
+    xor rax, rax             
+    xor rcx, rcx            
+
+convert:
+    movzx rbx, byte [rsi+rcx]  
+    cmp rbx, 0xA              
+    je check_prime        
+    cmp rbx, '0'             
+    jl invalid_input
+    cmp rbx, '9'             
+    jg invalid_input
+    sub rbx, '0'             
+    imul rax, rax, 10        
+    add rax, rbx            
+    inc rcx                   
+    jmp convert              
+
+invalid_input:
+    mov rax, 4               
+    mov rdi, 1                 
+    lea rsi, [error_msg]       
+    mov rdx, 15               
+    syscall
+    jmp main_loop           
+
+check_prime:
+    cmp rax, 1                
+    jl composite              
+    cmp rax, 2                
+    je prime                  
+    mov rcx, 2                
+
+prime_loop:
+    mov rdx, 0                
+    div rcx                   
+    cmp rdx, 0                
+    je composite              
+    inc rcx                   
+    cmp rcx, rax              
+    jl prime_loop             
+    jmp prime                 
+
+composite:
+    mov rax, 4              
+    mov rdi, 1                 
+    lea rsi, [message_composite]  
+    mov rdx, 21               
+    syscall
+    jmp main_loop             
+
+prime:
+    mov rax, 4               
+    mov rdi, 1                 
+    lea rsi, [message_prime]   
+    mov rdx, 17               
+    syscall
+    jmp main_loop             
+
+exit_program:
+    mov rax, 4             
+    mov rdi, 1                 
+    lea rsi, [exit_msg]     
+    mov rdx, 18            
+    syscall
+
+    mov rax, 1             
+    xor rdi, rdi               
+    syscall
+
+strcmp:
+    push rsi
+    push rdi
+strcmp_loop:
+    mov al, [rdi]              
+    mov bl, [rsi]              
+    cmp al, bl              
+    jne not_equal             
+    test al, al               
+    je equal                   
+    inc rdi                   
+    inc rsi                   
+    jmp strcmp_loop           
+equal:
+    xor rax, rax              
+    pop rdi
+    pop rsi
+    ret
+not_equal:
+    mov rax, 1                 
+    pop rdi
+    pop rsi
+    ret
